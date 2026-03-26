@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bazaar Ops - Daily Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-box-open"></i> Bazaar Ops</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" data-target="dashboard" class="active"><i class="fas fa-chart-line"></i> Dashboard Overview</a></li>
+            <li><a href="#" data-target="form-order"><i class="fas fa-shopping-cart"></i> Data Order</a></li>
+            <li><a href="#" data-target="form-sales"><i class="fas fa-store"></i> Sales Outlet</a></li>
+            <li><a href="#" data-target="form-ir-keluar"><i class="fas fa-truck-loading"></i> IR Keluar</a></li>
+            <li><a href="#" data-target="form-ir-masuk"><i class="fas fa-boxes"></i> IR Masuk</a></li>
+            <li><a href="#" data-target="form-bazaar"><i class="fas fa-calendar-alt"></i> Event Bazaar</a></li>
+        </ul>
+
+
+    <div class="sidebar-footer">
+        <div class="sidebar-team">
+        <h4><i class="fas fa-users"></i> Tim Bazaar Ops</h4>
+        <ul>
+            <li>Ibnu Rijal Tafsiri</li>
+            <li>Syaifullah</li>
+            <li>Zulpan Hermawan</li>
+            <li>Andhika Jati Sukma</li>
+        </ul>
+    </div>
+        <button id="theme-toggle" class="btn-secondary"><i class="fas fa-moon"></i> Dark Mode</button>
+        <button id="clear-data-btn" class="btn-danger mt-1"><i class="fas fa-trash-alt"></i> Clear Data</button>
+    </div>
+</nav>
+
+    <main class="main-content">
+        <header class="topbar">
+            <h1>Monitoring Operasional Harian</h1>
+            <div class="topbar-actions">
+                <input type="date" id="global-date-filter" title="Filter Dashboard by Date">
+                <button id="btn-print" class="btn-secondary"><i class="fas fa-print"></i> Print</button>
+                <button id="btn-export" class="btn-success"><i class="fas fa-file-excel"></i> Export Excel</button>
+            </div>
+        </header>
+
+        <section id="dashboard" class="view-section active">
+            <div class="grid-cards">
+                <div class="card stat-card">
+                    <div class="stat-icon bg-blue"><i class="fas fa-truck-loading"></i></div>
+                    <div class="stat-details">
+                        <h3>Total IR Keluar</h3>
+                        <p id="dash-ir-keluar-ir">0 IR</p>
+                        <small><span id="dash-ir-keluar-sku">0</span> SKU | <span id="dash-ir-keluar-qty">0</span> Qty</small>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon bg-green"><i class="fas fa-boxes"></i></div>
+                    <div class="stat-details">
+                        <h3>Total IR Masuk</h3>
+                        <p id="dash-ir-masuk-ir">0 IR</p>
+                        <small><span id="dash-ir-masuk-sku">0</span> SKU | <span id="dash-ir-masuk-qty">0</span> Qty</small>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon bg-orange"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-details">
+                        <h3>Event Bazaar Aktif</h3>
+                        <p id="dash-bazaar-active">0 Event</p>
+                        <small>Minggu Ini</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+    <div class="card chart-card">
+        <h3>Ringkasan Data Order</h3>
+        <div class="chart-container">
+            <canvas id="orderChart"></canvas>
+        </div>
+        <div class="table-responsive mt-1">
+            <table class="data-table" id="table-dash-order">
+                <thead><tr><th>Tanggal</th><th>SO Rls</th><th>Done</th><th>%</th><th>Ket</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card chart-card">
+        <h3>Distribusi Sales per Lokasi</h3>
+        <div class="chart-container">
+            <canvas id="salesPieChart"></canvas>
+        </div>
+        <div class="table-responsive mt-1">
+            <table class="data-table" id="table-dash-sales">
+                <thead><tr><th>Tanggal</th><th>SKU</th><th>Qty</th><th>Lokasi</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+            <div class="grid-2 mt-2">
+                <div class="card">
+                    <h3>5 IR Masuk Terbaru</h3>
+                    <div class="table-responsive">
+                        <table class="data-table" id="table-dash-irmasuk">
+                            <thead><tr><th>Tanggal</th><th>Jml IR</th><th>Warehouse</th><th>SKU</th><th>Qty</th><th>Ket</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>5 IR Keluar Terbaru</h3>
+                    <div class="table-responsive">
+                        <table class="data-table" id="table-dash-irkeluar">
+                            <thead><tr><th>Tanggal</th><th>Jml IR</th><th>Warehouse</th><th>SKU</th><th>Qty</th><th>Ket</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-2">
+                <h3>Update Bazaar</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="table-dash-bazaar">
+                        <thead><tr><th>Project</th><th>Mulai</th><th>Selesai</th><th>Ket</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="form-order" class="view-section">
+            <div class="card">
+                <h3 id="title-form-order">Input Data Order</h3>
+                <form id="formOrderObj" data-category="orders">
+                    <input type="hidden" id="order-id">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Tanggal</label><input type="date" id="order-tanggal" required></div>
+                        <div class="form-group"><label>SO Release</label><input type="number" id="order-so-release" required></div>
+                        <div class="form-group"><label>Qty Release</label><input type="number" id="order-qty-release" required></div>
+                        <div class="form-group"><label>Done SO</label><input type="number" id="order-done-so" required></div>
+                        <div class="form-group"><label>Done Qty</label><input type="number" id="order-done-qty" required></div>
+                        <div class="form-group"><label>Keterangan</label><input type="text" id="order-ket"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Data</button>
+                        <button type="button" class="btn-secondary btn-cancel" style="display:none;">Batal Edit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card mt-2">
+                <h3>Data Order Terinput</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="table-manage-orders">
+                        <thead><tr><th>Tanggal</th><th>SO Rls</th><th>Qty Rls</th><th>Done SO</th><th>Done Qty</th><th>Pend Qty</th><th>% Done</th><th>Ket</th><th>Aksi</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="form-sales" class="view-section">
+            <div class="card">
+                <h3 id="title-form-sales">Input Sales Outlet</h3>
+                <form id="formSalesObj" data-category="salesOutlet">
+                    <input type="hidden" id="sales-id">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Tanggal</label><input type="date" id="sales-tanggal" required></div>
+                        <div class="form-group"><label>SKU in Order</label><input type="number" id="sales-sku" required></div>
+                        <div class="form-group"><label>Qty in Order</label><input type="number" id="sales-qty" required></div>
+                        <div class="form-group"><label>Lokasi Outlet</label><input type="text" id="sales-lokasi" required></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Data</button>
+                        <button type="button" class="btn-secondary btn-cancel" style="display:none;">Batal Edit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card mt-2">
+                <h3>Data Sales Outlet Terinput</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="table-manage-salesOutlet">
+                        <thead><tr><th>Tanggal</th><th>SKU in Order</th><th>Qty in Order</th><th>Lokasi Outlet</th><th>Aksi</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="form-ir-keluar" class="view-section">
+            <div class="card">
+                <h3 id="title-form-irKeluar">Input IR Keluar</h3>
+                <form id="formIrKeluarObj" data-category="irKeluar">
+                    <input type="hidden" id="irkeluar-id">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Tanggal</label><input type="date" id="irkeluar-tanggal" required></div>
+                        <div class="form-group"><label>Jumlah IR</label><input type="number" id="irkeluar-jumlah" required></div>
+                        <div class="form-group"><label>Warehouse Destination</label><input type="text" id="irkeluar-warehouse" required></div>
+                        <div class="form-group"><label>Total SKU</label><input type="number" id="irkeluar-sku" required></div>
+                        <div class="form-group"><label>Total Qty</label><input type="number" id="irkeluar-qty" required></div>
+                        <div class="form-group"><label>Keterangan</label><input type="text" id="irkeluar-ket"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Data</button>
+                        <button type="button" class="btn-secondary btn-cancel" style="display:none;">Batal Edit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card mt-2">
+                <h3>Data IR Keluar Terinput</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="table-manage-irKeluar">
+                        <thead><tr><th>Tanggal</th><th>Jml IR</th><th>WH Destination</th><th>Total SKU</th><th>Total Qty</th><th>Keterangan</th><th>Aksi</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="form-ir-masuk" class="view-section">
+            <div class="card">
+                <h3 id="title-form-irMasuk">Input IR Masuk</h3>
+                <form id="formIrMasukObj" data-category="irMasuk">
+                    <input type="hidden" id="irmasuk-id">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Tanggal</label><input type="date" id="irmasuk-tanggal" required></div>
+                        <div class="form-group"><label>Jumlah IR</label><input type="number" id="irmasuk-jumlah" required></div>
+                        <div class="form-group"><label>Warehouse Origin</label><input type="text" id="irmasuk-warehouse" required></div>
+                        <div class="form-group"><label>Total SKU</label><input type="number" id="irmasuk-sku" required></div>
+                        <div class="form-group"><label>Total Qty</label><input type="number" id="irmasuk-qty" required></div>
+                        <div class="form-group"><label>Keterangan</label><input type="text" id="irmasuk-ket"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Data</button>
+                        <button type="button" class="btn-secondary btn-cancel" style="display:none;">Batal Edit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card mt-2">
+                <h3>Data IR Masuk Terinput</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="table-manage-irMasuk">
+                        <thead><tr><th>Tanggal</th><th>Jml IR</th><th>WH Origin</th><th>Total SKU</th><th>Total Qty</th><th>Keterangan</th><th>Aksi</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="form-bazaar" class="view-section">
+            <div class="card">
+                <h3 id="title-form-bazaar">Input Event Bazaar</h3>
+                <form id="formBazaarObj" data-category="bazaar">
+                    <input type="hidden" id="bazaar-id">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nama Project</label><input type="text" id="bazaar-nama" required></div>
+                        <div class="form-group"><label>Tanggal Mulai</label><input type="date" id="bazaar-mulai" required></div>
+                        <div class="form-group"><label>Tanggal Selesai</label><input type="date" id="bazaar-selesai" required></div>
+                        <div class="form-group"><label>Keterangan</label><input type="text" id="bazaar-ket"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Data</button>
+                        <button type="button" class="btn-secondary btn-cancel" style="display:none;">Batal Edit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card mt-2">
+                <h3>Data Event Bazaar Terinput</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="table-manage-bazaar">
+                        <thead><tr><th>Project</th><th>Mulai</th><th>Selesai</th><th>Keterangan</th><th>Aksi</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
