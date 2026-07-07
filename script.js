@@ -248,8 +248,15 @@ function renderTableHtml(tableId, dataArray, columns) {
             let td = document.createElement('td');
             // Format numbers if it's purely a number and not a date/string
             let val = item[col];
-            if(!isNaN(val) && val !== '' && col !== 'percentDone') val = formatNum(val);
-            if(col === 'percentDone') val = val + '%';
+            if (col.toLowerCase().includes('tanggal') && val) {
+                // Jika nama kolom mengandung kata "tanggal", ubah formatnya
+                val = formatDate(val);
+            } else if(!isNaN(val) && val !== '' && col !== 'percentDone') {
+                // Format numbers jika itu murni angka
+                val = formatNum(val);
+            } else if(col === 'percentDone') {
+                val = val + '%';
+            }
             td.innerText = val || '-';
             tr.appendChild(td);
         });
@@ -269,8 +276,15 @@ function renderTableWithActions(tableId, dataArray, columns, category) {
         columns.forEach(col => {
             let td = document.createElement('td');
             let val = item[col];
-            if(!isNaN(val) && val !== '' && col !== 'percentDone') val = formatNum(val);
-            if(col === 'percentDone') val = val + '%';
+            if (col.toLowerCase().includes('tanggal') && val) {
+                // Jika nama kolom mengandung kata "tanggal", ubah formatnya
+                val = formatDate(val);
+            } else if(!isNaN(val) && val !== '' && col !== 'percentDone') {
+                // Format numbers jika itu murni angka
+                val = formatNum(val);
+            } else if(col === 'percentDone') {
+                val = val + '%';
+            }
             td.innerText = val || '-';
             tr.appendChild(td);
         });
