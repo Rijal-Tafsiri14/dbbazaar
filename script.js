@@ -72,6 +72,22 @@ const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
 const formatNum = (num) => Number(num).toLocaleString('id-ID');
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
+const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+        // Paksa jadi string dulu agar tidak error "split is not a function"
+        const parts = String(dateString).split('-');
+        if (parts.length >= 3) {
+            // Ambil 2 digit hari (jaga-jaga jika ada waktu di belakangnya)
+            const day = parts[2].substring(0, 2);
+            return `${day}/${parts[1]}/${parts[0]}`;
+        }
+    } catch (error) {
+        console.error("Gagal format tanggal:", error);
+    }
+    return dateString; // Kembalikan nilai asli kalau formatnya tidak sesuai
+};
+
 
 function calculateOrderStats(release, done) {
     const rel = parseFloat(release) || 0;
@@ -117,7 +133,7 @@ function renderDashboard(filterDate) {
     document.getElementById('dash-ir-masuk-sku').innerText = formatNum(totalSkuM);
     document.getElementById('dash-ir-masuk-qty').innerText = formatNum(totalQtyM);
 
-    // Event Bazaar Aktif (Minggu ini / Hari ini di antara mulai & selesai)
+    // Event Bazaar Aktif
     const today = new Date().setHours(0,0,0,0);
     const activeBazaar = dbData.bazaar.filter(b => {
         const start = new Date(b.tanggalMulai).setHours(0,0,0,0);
@@ -145,67 +161,62 @@ function renderDashboard(filterDate) {
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
-// --- UPDATE SALES OUTLET CHART (QTY & SKU DARI INPUT) ---
-const salesCtx = document.getElementById('salesPieChart').getContext('2d');
 
-// 1. Kelompokkan Data per Lokasi
-const locationStats = {};
+    // --- UPDATE SALES OUTLET CHART ---
+    const salesCtx = document.getElementById('salesPieChart').getContext('2d');
+    const locationStats = {};
 
-// Pastikan fSales ada isinya
-if (fSales && fSales.length > 0) {
-    fSales.forEach(item => {
-        const loc = (item.lokasi || 'Tanpa Lokasi').trim();
-        if (!locationStats[loc]) {
-            locationStats[loc] = { qty: 0, sku: 0 };
-        }
-        
-        // Ambil angka dari input, kalau bukan angka jadi 0 (biar gak error/ilang)
-        locationStats[loc].qty += Number(item.qtyOrder) || 0;
-        locationStats[loc].sku += Number(item.skuOrder) || 0; 
-    });
-}
-
-const labels = Object.keys(locationStats);
-const dataQty = labels.map(loc => locationStats[loc].qty);
-const dataSku = labels.map(loc => locationStats[loc].sku);
-
-if (salesPieChartInstance) salesPieChartInstance.destroy();
-
-// Menggunakan tipe 'bar' agar SKU dan Qty bisa berdampingan dengan warna beda
-salesPieChartInstance = new Chart(salesCtx, {
-    type: 'bar',
-    data: {
-        labels: labels,
-        datasets: [
-            {
-                label: 'Total Qty (Warna Biru)',
-                data: dataQty,
-                backgroundColor: '#3498db', // WARNA A (Biru) untuk Qty
-                borderColor: '#2980b9',
-                borderWidth: 1,
-                yAxisID: 'y'
-            },
-            {
-                label: 'Variasi SKU (Warna Oranye)',
-    data: dataSku,
-    backgroundColor: '#e67e22',
+    if (fSales && fSales.length > 0) {
+        fSales.forEach(item => {
+            const loc = (item.lokasi || 'Tanpa Lokasi').trim();
+            if (!locationStats[loc]) {
+                locationStats[loc] = { qty: 0, sku: 0 };
             }
-        ]
-    },
-    options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-        y: { 
-            type: 'linear', 
-            position: 'left', 
-            beginAtZero: true,
-            title: { display: true, text: 'Jumlah (Pcs & SKU)' }
-        }
-        // HAPUS bagian y1 di sini agar skala kanan hilang
+            locationStats[loc].qty += Number(item.qtyOrder) || 0;
+            locationStats[loc].sku += Number(item.skuOrder) || 0; 
+        });
     }
-}
-});
+
+    const labels = Object.keys(locationStats);
+    const dataQty = labels.map(loc => locationStats[loc].qty);
+    const dataSku = labels.map(loc => locationStats[loc].sku);
+
+    if (salesPieChartInstance) salesPieChartInstance.destroy();
+
+    salesPieChartInstance = new Chart(salesCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Qty (Warna Biru)',
+                    data: dataQty,
+                    backgroundColor: '#3498db',
+                    borderColor: '#2980b9',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Variasi SKU (Warna Oranye)',
+                    data: dataSku,
+                    backgroundColor: '#e67e22',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    type: 'linear', 
+                    position: 'left', 
+                    beginAtZero: true,
+                    title: { display: true, text: 'Jumlah (Pcs & SKU)' }
+                }
+            }
+        }
+    });
+
     // --- UPDATE TABLES DASHBOARD ---
     renderTableHtml('table-dash-order', fOrders, ['tanggal', 'soRelease', 'doneSO', 'percentDone', 'keterangan']);
     renderTableHtml('table-dash-sales', fSales, ['tanggal', 'skuOrder', 'qtyOrder', 'lokasi']);
@@ -230,22 +241,29 @@ function renderManagementTables() {
 
 function renderTableHtml(tableId, dataArray, columns) {
     const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return;
+    
     tbody.innerHTML = '';
-    if(dataArray.length === 0) {
+    if(!dataArray || dataArray.length === 0) {
         tbody.innerHTML = `<tr><td colspan="${columns.length}" style="text-align:center;">Tidak ada data</td></tr>`;
         return;
     }
+    
     dataArray.forEach(item => {
         let tr = document.createElement('tr');
         columns.forEach(col => {
             let td = document.createElement('td');
-            // Format numbers if it's purely a number and not a date/string
             let val = item[col];
-             if(!isNaN(val) && val !== '' && col !== 'percentDone') val = formatNum(val);
+            
+            if (String(col).toLowerCase().includes('tanggal') && val) {
+                val = formatDate(val);
+            } else if (val !== null && val !== '' && val !== undefined && !isNaN(val) && col !== 'percentDone') {
+                val = formatNum(val);
+            } else if (col === 'percentDone') {
+                val = val + '%';
+            }
 
-            if(col === 'percentDone') val = val + '%';
-
-            td.innerText = val || '-';
+            td.innerText = (val !== undefined && val !== null && val !== '') ? val : '-';
             tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -254,23 +272,32 @@ function renderTableHtml(tableId, dataArray, columns) {
 
 function renderTableWithActions(tableId, dataArray, columns, category) {
     const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return;
+    
     tbody.innerHTML = '';
-    if(dataArray.length === 0) {
+    if(!dataArray || dataArray.length === 0) {
         tbody.innerHTML = `<tr><td colspan="${columns.length + 1}" style="text-align:center;">Tidak ada data</td></tr>`;
         return;
     }
+    
     dataArray.forEach(item => {
         let tr = document.createElement('tr');
         columns.forEach(col => {
             let td = document.createElement('td');
             let val = item[col];
-            if(!isNaN(val) && val !== '' && col !== 'percentDone') val = formatNum(val);
+            
+            if (String(col).toLowerCase().includes('tanggal') && val) {
+                val = formatDate(val);
+            } else if (val !== null && val !== '' && val !== undefined && !isNaN(val) && col !== 'percentDone') {
+                val = formatNum(val);
+            } else if (col === 'percentDone') {
+                val = val + '%';
+            }
 
-            if(col === 'percentDone') val = val + '%';
-            td.innerText = val || '-';
+            td.innerText = (val !== undefined && val !== null && val !== '') ? val : '-';
             tr.appendChild(td);
         });
-        // Actions
+        
         let tdAction = document.createElement('td');
         tdAction.className = 'action-buttons';
         tdAction.innerHTML = `
@@ -281,7 +308,6 @@ function renderTableWithActions(tableId, dataArray, columns, category) {
         tbody.appendChild(tr);
     });
 }
-
 // ==========================================
 // 6. EVENT LISTENERS & FORM HANDLING
 // ==========================================
