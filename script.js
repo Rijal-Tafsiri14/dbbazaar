@@ -79,7 +79,7 @@ const formatDate = (dateString) => {
         return `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah YYYY-MM-DD jadi DD/MM/YYYY
     }
     return dateString;
-
+};
 function calculateOrderStats(release, done) {
     const rel = parseFloat(release) || 0;
     const dn = parseFloat(done) || 0;
