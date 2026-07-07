@@ -72,6 +72,14 @@ const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
 const formatNum = (num) => Number(num).toLocaleString('id-ID');
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
+const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah YYYY-MM-DD jadi DD/MM/YYYY
+    }
+    return dateString;
+
 function calculateOrderStats(release, done) {
     const rel = parseFloat(release) || 0;
     const dn = parseFloat(done) || 0;
