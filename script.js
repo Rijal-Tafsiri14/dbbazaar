@@ -72,14 +72,7 @@ const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
 const formatNum = (num) => Number(num).toLocaleString('id-ID');
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah YYYY-MM-DD jadi DD/MM/YYYY
-    }
-    return dateString;
-};
+
 function calculateOrderStats(release, done) {
     const rel = parseFloat(release) || 0;
     const dn = parseFloat(done) || 0;
@@ -248,15 +241,10 @@ function renderTableHtml(tableId, dataArray, columns) {
             let td = document.createElement('td');
             // Format numbers if it's purely a number and not a date/string
             let val = item[col];
-            if (col.toLowerCase().includes('tanggal') && val) {
-                // Jika nama kolom mengandung kata "tanggal", ubah formatnya
-                val = formatDate(val);
-            } else if(!isNaN(val) && val !== '' && col !== 'percentDone') {
-                // Format numbers jika itu murni angka
-                val = formatNum(val);
-            } else if(col === 'percentDone') {
-                val = val + '%';
-            }
+             if(!isNaN(val) && val !== '' && col !== 'percentDone') val = formatNum(val);
+
+            if(col === 'percentDone') val = val + '%';
+
             td.innerText = val || '-';
             tr.appendChild(td);
         });
@@ -276,15 +264,9 @@ function renderTableWithActions(tableId, dataArray, columns, category) {
         columns.forEach(col => {
             let td = document.createElement('td');
             let val = item[col];
-            if (col.toLowerCase().includes('tanggal') && val) {
-                // Jika nama kolom mengandung kata "tanggal", ubah formatnya
-                val = formatDate(val);
-            } else if(!isNaN(val) && val !== '' && col !== 'percentDone') {
-                // Format numbers jika itu murni angka
-                val = formatNum(val);
-            } else if(col === 'percentDone') {
-                val = val + '%';
-            }
+            if(!isNaN(val) && val !== '' && col !== 'percentDone') val = formatNum(val);
+
+            if(col === 'percentDone') val = val + '%';
             td.innerText = val || '-';
             tr.appendChild(td);
         });
